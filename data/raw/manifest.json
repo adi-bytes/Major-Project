@@ -1,0 +1,38 @@
+{
+  "new_dataset_GaO_WF+T.csv": {
+    "source_url": "https://raw.githubusercontent.com/hywong2/Semiconductor_Database/master/GaO_Schottky_Diode_T_WF/new_dataset_GaO_WF%2BT.csv",
+    "filename": "new_dataset_GaO_WF+T.csv",
+    "size_bytes": 1567245,
+    "sha256": "8196234e58b057e4f3a0965825e20204ddcdb5e8f48bf46235b662e91d37649c"
+  },
+  "n9000_4e+16_3X4e+16_377_5014.csv": {
+    "source_url": "https://raw.githubusercontent.com/hywong2/Semiconductor_Database/master/GaO_Schottky_Diode_T_WF/n9000_4e%2B16_3X4e%2B16_377_5014.csv",
+    "filename": "n9000_4e+16_3X4e+16_377_5014.csv",
+    "size_bytes": 1270,
+    "sha256": "a57820bb5f1b8205521363c3934a36dba402bb318a92d3e58691cb1b36b67f36"
+  },
+  "ds_file_9000_4e+16_3X4e+16_377_5014.cmd": {
+    "source_url": "https://raw.githubusercontent.com/hywong2/Semiconductor_Database/master/GaO_Schottky_Diode_T_WF/ds_file_9000_4e%2B16_3X4e%2B16_377_5014.cmd",
+    "filename": "ds_file_9000_4e+16_3X4e+16_377_5014.cmd",
+    "size_bytes": 2368,
+    "sha256": "5f7480ee1c62eb6f5d8759bb491604d8fe94e917b90ff85ec056cd384f40a0e1"
+  },
+  "n9000_4e+16_3X4e+16_377_5014_msh.cmd": {
+    "source_url": "https://raw.githubusercontent.com/hywong2/Semiconductor_Database/master/GaO_Schottky_Diode_T_WF/n9000_4e%2B16_3X4e%2B16_377_5014_msh.cmd",
+    "filename": "n9000_4e+16_3X4e+16_377_5014_msh.cmd",
+    "size_bytes": 1733,
+    "sha256": "7ff060a8cca1cf9ae84f3a4caf562cb89fee60c308733c24a2f746928839d8fd"
+  },
+  "Readme": {
+    "source_url": "https://raw.githubusercontent.com/hywong2/Semiconductor_Database/master/GaO_Schottky_Diode_T_WF/Readme",
+    "filename": "Readme",
+    "size_bytes": 912,
+    "sha256": "a130953a26bf7b4c546765f4dbb43f2430e162c5f78548b15db372c1db3fc862"
+  },
+  "TCAD-Augmented_Machine_Learning_With_and_Without_Domain_Expertise.pdf": {
+    "source_url": "https://raw.githubusercontent.com/hywong2/Semiconductor_Database/master/GaO_Schottky_Diode_T_WF/TCAD-Augmented_Machine_Learning_With_and_Without_Domain_Expertise.pdf",
+    "filename": "TCAD-Augmented_Machine_Learning_With_and_Without_Domain_Expertise.pdf",
+    "size_bytes": 1800537,
+    "sha256": "772578b4febf1d72bcdbbcbd48d1a89eb3d8f2a84b1727143b7251ae0eb96dac"
+  }
+}

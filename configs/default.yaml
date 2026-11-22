@@ -1,0 +1,78 @@
+# PG-SBD Configuration Specification
+seed: 42
+
+dataset:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  raw_csv_filename: "new_dataset_GaO_WF+T.csv"
+  example_iv_filename: "n9000_4e+16_3X4e+16_377_5014.csv"
+  sde_cmd_filename: "n9000_4e+16_3X4e+16_377_5014_msh.cmd"
+  sdevice_cmd_filename: "ds_file_9000_4e+16_3X4e+16_377_5014.cmd"
+  readme_filename: "Readme"
+  paper_pdf_filename: "TCAD-Augmented_Machine_Learning_With_and_Without_Domain_Expertise.pdf"
+  github_raw_base: "https://raw.githubusercontent.com/hywong2/Semiconductor_Database/master/GaO_Schottky_Diode_T_WF"
+  v_start: 0.0
+  v_stop: 4.0
+  v_points: 52
+  current_noise_floor_A: 1.0e-14
+  log_current_min_A: 1.0e-12
+
+bounds:
+  WF: [4.99, 5.19]       # eV, verified bounds (tcad_validated)
+  T: [300.0, 500.0]      # K, verified bounds (tcad_validated)
+  t_D_um: [3.0, 15.0]    # um, drift thickness (Tier B: physics_extrapolated)
+  N_net_cm3: [1.0e15, 5.0e16] # cm^-3, net donor concentration (Tier B: physics_extrapolated)
+  d_um: [50.0, 500.0]    # um, anode diameter (Tier B: physics_extrapolated)
+
+baseline_device:
+  t_D_um: 9.0
+  N_net_cm3: 6.0e15      # 4e16 donor - 3.4e16 acceptor compensation
+  d_um: 200.0            # placeholder nominal diameter; area will be calibrated from TCAD
+  eta_term: 0.5          # termination efficiency (HONESTY assumption)
+  R_sub_sp_mohm_cm2: 0.1 # substrate specific resistance contribution
+
+splits:
+  seed: 42
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  extrapolation_corner:
+    WF_min: 5.16
+    T_min: 470.0
+
+physics:
+  q: 1.602176634e-19     # C
+  kB: 1.380649e-23       # J/K
+  eps_0: 8.8541878128e-14 # F/cm
+  eps_r: 10.0            # relative permittivity for beta-Ga2O3
+  A_richardson_const: 34.0 # A cm^-2 K^-2 (m* = 0.28 m0)
+  Ec_V_cm: 8.0e6         # Critical electric field for breakdown (V/cm)
+  # Calibration initial guesses
+  chi_eff: 4.0           # eV
+  ideality_n: 1.05
+  A_eff_cm2: 1.0e-4      # initial guess, to be calibrated
+  mu_300: 120.0          # cm^2 / V s
+  alpha: 1.7             # temperature exponent for mobility
+  N_ref: 1.0e17          # cm^-3
+  beta: 0.6
+  R_c_ohm: 5.0           # Contact resistance (ohm)
+
+metrics:
+  i_ref_A: 1.0e-3        # 1 mA reference current for Von
+  v_op: 2.0              # 2 V operating voltage for I(V_op)
+  vo_current_A: 1.0e-5   # 10 uA for Vo
+  ss_lower_current_A: 1.0e-6 # 1 uA for SS computation
+  ss_upper_current_A: 1.0e-5 # 10 uA for SS computation
+  rdiff_points: 5        # last 5 points for linear regression
+
+surrogate:
+  residual_cap: 0.7      # decades c
+  hidden_dims: [128, 128]
+  activation: "silu"
+  learning_rate: 2.0e-3
+  weight_decay: 1.0e-4
+  ensemble_size: 5
+  lambda_mono: 0.1
+  lambda_smooth: 0.01
+  lambda_res: 0.01
+  uncertainty_threshold: 0.1 # decades sigma in turn-on/subthreshold region
