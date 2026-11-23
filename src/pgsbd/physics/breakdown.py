@@ -47,13 +47,16 @@ class Breakdown1D:
         epsilon_r: float = 10.0,
         e_c0: float = 8.0e6,
         v_bi: float = 1.2,
-        scale_ec_with_doping: bool = True,
+        scale_ec_with_doping: bool = False,
+        eta_term: float = 0.5,
     ):
         self.epsilon_r = float(epsilon_r)
         self.epsilon_s = self.epsilon_r * self.EPSILON_0
         self.e_c0 = float(e_c0)
         self.v_bi = float(v_bi)
         self.scale_ec = scale_ec_with_doping
+        # Termination efficiency: ideal 1-D limit is derated (spec assumption, unvalidated)
+        self.eta_term = float(eta_term)
 
     def compute_ec(self, n_net_cm3: float | np.ndarray) -> float | np.ndarray:
         """Compute critical electric field with optional weak doping dependence."""
@@ -106,6 +109,8 @@ class Breakdown1D:
 
         v_br = np.where(is_npt, v_br_npt, v_br_pt)
         v_br = np.maximum(v_br, 0.0)
+        v_br_ideal = v_br
+        v_br = self.eta_term * v_br_ideal
 
         w_dep_cm = np.where(is_npt, w_c_cm, t_d_cm)
         w_dep_um = w_dep_cm * 1.0e4
@@ -122,6 +127,8 @@ class Breakdown1D:
         if np.ndim(v_br) == 0:
             return {
                 "v_br": float(v_br),
+                "v_br_ideal": float(v_br_ideal),
+                "eta_term": self.eta_term,
                 "regime": str(regime),
                 "w_dep_um": float(w_dep_um),
                 "w_c_um": float(w_c_cm * 1.0e4),
@@ -133,6 +140,7 @@ class Breakdown1D:
 
         return {
             "v_br": v_br,
+            "v_br_ideal": v_br_ideal,
             "regime": regime,
             "w_dep_um": w_dep_um,
             "w_c_um": w_c_cm * 1.0e4,
@@ -191,6 +199,8 @@ class Breakdown1D:
         is_npt = w_c_cm <= t_d_cm
         v_br = torch.where(is_npt, v_br_npt, v_br_pt)
         v_br = torch.clamp(v_br, min=0.0)
+        v_br_ideal = v_br
+        v_br = self.eta_term * v_br_ideal
 
         w_dep_cm = torch.where(is_npt, w_c_cm, t_d_cm)
         w_dep_um = w_dep_cm * 1.0e4
@@ -202,6 +212,7 @@ class Breakdown1D:
 
         return {
             "v_br": v_br,
+            "v_br_ideal": v_br_ideal,
             "w_dep_um": w_dep_um,
             "w_c_um": w_c_cm * 1.0e4,
             "e_c_v_cm": e_c,

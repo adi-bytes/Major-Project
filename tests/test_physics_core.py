@@ -51,7 +51,7 @@ def test_10000_point_random_sweep_zero_nan():
     # Sample random WF, T, and V
     wf = torch.empty(n_points, dtype=torch.float64).uniform_(4.99, 5.19)
     temp = torch.empty(n_points, dtype=torch.float64).uniform_(300.0, 500.0)
-    v = torch.empty(n_points, dtype=torch.float64).uniform_(0.0, 4.0)
+    v = torch.empty(n_points, 1, dtype=torch.float64).uniform_(0.0, 4.0)  # one V per row
 
     # Forward evaluation
     currents = core.forward(v, wf, temp)

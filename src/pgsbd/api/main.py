@@ -133,15 +133,23 @@ def create_app() -> FastAPI:
     # Mount API router
     application.include_router(router, prefix="/api", tags=["API"])
 
-    @application.get("/", tags=["Root"])
-    async def root_info() -> dict[str, str]:
-        return {
-            "title": "PG-SBD Designer API",
-            "version": "1.0.0",
-            "docs_url": "/docs",
-            "health_url": "/api/health",
-            "honesty_notice": HONESTY_NOTICE,
-        }
+    # Serve the built React UI from the same port when web/dist exists (run: cd web && npm run build)
+    dist_dir = Path(__file__).resolve().parents[3] / "web" / "dist"
+    if (dist_dir / "index.html").exists():
+        from fastapi.staticfiles import StaticFiles
+
+        application.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="ui")
+    else:
+
+        @application.get("/", tags=["Root"])
+        async def root_info() -> dict[str, str]:
+            return {
+                "title": "PG-SBD Designer API",
+                "version": "1.0.0",
+                "docs_url": "/docs",
+                "health_url": "/api/health",
+                "honesty_notice": HONESTY_NOTICE,
+            }
 
     return application
 

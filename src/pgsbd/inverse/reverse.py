@@ -269,6 +269,15 @@ class SBDReverseEngine:
                 )
                 break
 
+        status = "met"
+        if fit_mae_decades > 0.05:
+            status = "poor_fit"
+            warnings.insert(
+                0,
+                f"Poor fit: mean log-current residual {fit_mae_decades:.2f} decades. The curve may not "
+                "come from this device/anode area; recovered WF and T are NOT reliable.",
+            )
+
         return {
             "recovered": {
                 "WF": recovered_wf,
@@ -286,5 +295,5 @@ class SBDReverseEngine:
             "reconstructed": reconstructed,
             "nearest_tcad": nearest_tcad,
             "warnings": warnings,
-            "status": "met",
+            "status": status,
         }

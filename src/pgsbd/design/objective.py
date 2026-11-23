@@ -179,6 +179,7 @@ class DesignEvaluator:
             },
             "metrics": {
                 "v_br": float(bd_res["v_br"]),
+                "v_br_ideal": float(bd_res["v_br_ideal"]),
                 "regime": str(bd_res["regime"]),
                 "w_dep_um": float(bd_res["w_dep_um"]),
                 "bfom_mw_cm2": float(bd_res["bfom_mw_cm2"]),

@@ -1,10 +1,11 @@
 # PG-SBD Designer Root Makefile
 
-PYTHON := .venv/Scripts/python.exe
-PYTEST := .venv/Scripts/pytest.exe
-RUFF := .venv/Scripts/ruff.exe
+# Override on Windows, e.g.:  make serve PYTHON=.venv/Scripts/python.exe
+PYTHON ?= python
+PYTEST ?= $(PYTHON) -m pytest
+RUFF ?= $(PYTHON) -m ruff
 
-.PHONY: help data calibrate train eval serve test demo lint
+.PHONY: help data calibrate train eval ui serve test demo lint
 
 help:
 	@echo "Available commands:"
@@ -31,6 +32,9 @@ train:
 eval:
 	$(PYTHON) scripts/evaluate.py
 	$(PYTHON) scripts/eval_reverse.py
+
+ui:
+	cd web && npm install && npm run build
 
 serve:
 	$(PYTHON) scripts/serve.py

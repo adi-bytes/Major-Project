@@ -124,8 +124,8 @@ class ReverseRequest(BaseSchema):
             )
         if any(v_val < 0.0 for v_val in self.v):
             raise ValueError("All voltage values in 'v' must be non-negative (>= 0.0 V).")
-        if any(i_val <= 0.0 for i_val in self.i):
-            raise ValueError("All current values in 'i' must be strictly positive (> 0.0 A).")
+        # Non-positive values (numerical noise near 0 V) are floored at the 1e-14 A noise floor
+        self.i = [max(float(i_val), 1.0e-14) for i_val in self.i]
         return self
 
 

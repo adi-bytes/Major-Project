@@ -36,9 +36,12 @@ def sample_curve():
 
 
 def test_root_endpoint(client: TestClient):
-    """Verify root / endpoint returns service info."""
+    """Verify / serves the built UI (if web/dist exists) or the JSON service info."""
     response = client.get("/")
     assert response.status_code == 200
+    if "text/html" in response.headers.get("content-type", ""):
+        assert '<div id="root">' in response.text or "<script" in response.text
+        return
     data = response.json()
     assert data["title"] == "PG-SBD Designer API"
     assert "/docs" in data["docs_url"]
@@ -174,7 +177,6 @@ def test_reverse_valid_curve(client: TestClient, sample_curve):
     [
         ({"v": [0.0, 1.0, 2.0], "i": [1e-12, 1e-6]}, "length mismatch"),
         ({"v": [-0.5, 1.0], "i": [1e-12, 1e-6]}, "non-negative"),
-        ({"v": [0.0, 1.0], "i": [-1e-12, 1e-6]}, "strictly positive"),
         ({"v": [], "i": []}, "min_length"),
         ({"v": [0.0, 1.0], "i": [1e-12, 1e-6], "dataset_file": "secret.csv"}, "extra"),
     ],

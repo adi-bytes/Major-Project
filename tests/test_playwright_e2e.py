@@ -67,7 +67,9 @@ def test_playwright_full_e2e_demo(api_server):
         try:
             urllib.request.urlopen("http://localhost:5173", timeout=2)
         except (urllib.error.URLError, TimeoutError, OSError):
-            pytest.skip("Vite frontend server (http://localhost:5173) not running; skipping Playwright browser test.")
+            pytest.skip(
+                "Vite frontend server (http://localhost:5173) not running; skipping Playwright browser test."
+            )
 
         # Navigate to frontend
         try:

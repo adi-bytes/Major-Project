@@ -155,7 +155,10 @@ class NSGADesignEngine:
 
         candidates = []
         if res.X is not None and len(res.X) > 0:
-            x_pts = np.atleast_2d(res.X)
+            x_pts = np.atleast_2d(res.X).copy()
+            if reqs.fixed_temperature is not None:
+                # The temperature gene is neutral during search; force the requested value
+                x_pts[:, 1] = float(np.clip((reqs.fixed_temperature - 300.0) / 200.0, 0.0, 1.0))
             for u_pt in x_pts:
                 phys = unit_to_physical(u_pt)
                 cand = self.evaluator.evaluate_candidate(

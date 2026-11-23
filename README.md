@@ -51,7 +51,7 @@ All 9 phases of the PG-SBD research and development roadmap are complete, verifi
 | **Phase 1** | **Data Acquisition & Audit** | Verified raw Sentaurus TCAD dataset with SHA-256 manifest; 2,000 curves $\times$ 52 voltage points; established grouped splits (Train: 1373, Val: 289, Test: 299, Extrap: 39) with 0% data leakage; documented in `reports/data_audit.md`. |
 | **Phase 2** | **Plain ML Baselines** | Implemented scikit-learn (Ridge, HistGradientBoosting, KNN $k=3$) and plain PyTorch MLP baselines; established metric harness ($V_o, SS, R_{\text{diff}}, V_{\text{on}}, I(V_{\text{op}})$). |
 | **Phase 3** | **Differentiable Physics Core** | Built closed-form log-domain Lambert-W solver passing `torch.autograd.gradcheck`; calibrated physical parameters ($\chi_{\text{eff}} = 3.9841\,\text{eV}$, $n = 1.0463$, $\mu_{300} = 250.0\,\text{cm}^2/\text{Vs}$, $\alpha = 1.405$, $A_{\text{eff}} = 1.711\times 10^{-4}\,\text{cm}^2$) stored in `artifacts/calib.json`. |
-| **Phase 4** | **Hybrid Ensemble & Ablation** | Developed $M=5$ bounded residual ensemble ($\log_{10} I = \log_{10} I_{\text{phys}} + c\tanh(g/c)$) with monotonicity loss; passed 10,000-point zero-NaN sweep; outperformed all baselines on extrapolation ($\log_{10} I$ MAE: 0.0010 dec); ran 3-arm ablation study. |
+| **Phase 4** | **Hybrid Ensemble & Ablation** | Developed $M=5$ bounded residual ensemble ($\log_{10} I = \log_{10} I_{\text{phys}} + c\tanh(g/c)$) with monotonicity loss; passed 10,000-point zero-NaN sweep; lowest $\log_{10} I$ MAE on the corner block (0.0010 dec; the corner lies inside the sampled box, so it is a mild test). A plain MLP is as accurate or better on the random test split; ran 3-arm ablation study. |
 | **Phase 5** | **Tier A Reverse Mode** | Implemented 9-start normalized L-BFGS-B engine recovering $(\text{WF}, T)$ from arbitrary $I\text{--}V$ curves; benchmarked across 0%, 1%, and 5% noise; integrated nearest-TCAD lookup and ambiguity warnings. |
 | **Phase 6** | **FastAPI Backend** | Built production FastAPI service with strict Pydantic v2 bound validation; startup artifact preloading (zero training on request); CORS support for Vite; API contract integration tests. |
 | **Phase 7** | **React Frontend** | Built interactive React 18 + TS + Vite + Tailwind + Plotly.js application; implemented all 6 views with permanent `[HONESTY]` banner; hidden ground-truth reveal in Reverse view; 0 hard-coded metrics (all read from API). |
@@ -84,10 +84,10 @@ All metrics reflect actual measured numbers recorded in `artifacts/metrics.json`
 | **5% Multiplicative Noise** | **0.0095** | 0.0121 | **5.57** | 7.07 | 2,072 ms |
 
 ### 2.3 Tier B Design Mode Breakdown & Synthesis Performance
-- **1-D Analytic Breakdown (Baseline Device):** $V_{\text{br}} = 6,400.5\,\text{V}$ (punch-through, $W_c = 70.02\,\mu\text{m}$, $R_{\text{drift,sp}} = 3.74\,\text{m}\Omega\cdot\text{cm}^2$, $\text{BFOM} = 10,939\,\text{MW/cm}^2$).
+- **1-D Analytic Breakdown (Baseline Device):** ideal limit $V_{\text{br,ideal}} \approx 6,400\,\text{V}$; the reported breakdown is derated by an assumed termination efficiency $\eta_{\text{term}} = 0.5$ (unvalidated) (punch-through, $W_c = 70.02\,\mu\text{m}$, $R_{\text{drift,sp}} = 3.74\,\text{m}\Omega\cdot\text{cm}^2$, $\text{BFOM} = 10,939\,\text{MW/cm}^2$).
 - **Sobol + Adam Synthesis (256 starts $\to$ 16 top):** 8 Pareto candidates generated in **3.17 s**.
 - **NSGA-II Synthesis (40 population, 25 generations):** 8 Pareto candidates generated in **4.20 s**.
-- **200-Curve Round-Trip Self-Consistency Test:** **100% convergence (200 / 200)**; mean parameter error $< 0.05\%$.
+- **Verdict-function consistency check (200 random designs):** confirms the verdict logic is internally consistent. It does **not** run the inverse solver, so it is not evidence of inverse-design accuracy; a held-out round-trip test is future work.
 
 ---
 
@@ -118,7 +118,8 @@ make train
 # 4. Run the full evaluation harness and update artifacts/metrics.json
 make eval
 
-# 5. Start the FastAPI backend and Vite frontend development servers
+# 5. Build the UI once, then serve API + UI together at http://127.0.0.1:8000
+make ui
 make serve
 
 # 6. Execute the complete test suite (unit, integration, API contract, and Playwright E2E)
