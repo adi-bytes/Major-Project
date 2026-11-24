@@ -186,7 +186,7 @@ def generate_model_card_markdown(
 
 ## 1. Model Overview
 - **Model Name:** Physics-Guided Surrogate Ensemble (PG-SBD)
-- **Model Version:** 1.0.0 (Phase 4 Verified Release)
+- **Model Version:** 2.0.0 (Calibrated Hybrid Ensemble)
 - **Architecture:** Hybrid Physics-Guided Bounded Residual Ensemble ($M = 5$ bootstrap/multi-seed sub-models).
 - **Core Formulation:**
   $$\\log_{{10}} I(V_k) = \\log_{{10}} I_{{\\text{{phys}}}}(V_k;\\,\\text{{WF}}, T, \\theta_{{\\text{{cal}}}}) + c \\cdot \\tanh\\!\\left(\\frac{{g(\\text{{WF}}, T)_k}}{{c}}\\right)$$

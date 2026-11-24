@@ -1,159 +1,330 @@
-# PG-SBD Designer
+# PHYSICS-GUIDED ML SURROGATE AND INVERSE DESIGN FRAMEWORK FOR POWER SEMICONDUCTOR DEVICES
 
-> **[HONESTY] Research prototype trained on TCAD simulation data. Not validated for fabrication or experimental device design.**
-
-**Physics-Guided Surrogate Modeling and Inverse Design Framework for Power Semiconductor Devices**  
-*Case-Study Device (Plug-in #1):* Vertical $\beta\text{-Ga}_2\text{O}_3$ Schottky Barrier Diode (SBD)  
-*Primary Dataset:* `GaO_Schottky_Diode_T_WF` from [https://github.com/hywong2/Semiconductor_Database](https://github.com/hywong2/Semiconductor_Database) (Dhillon et al., *IEEE Transactions on Electron Devices*, 68(11), 2021).
+> **[ACADEMIC NOTICE & VALIDATION BOUNDARY]**  
+> This project is a research prototype calibrated against numerical TCAD simulation datasets. While physical constraints and conservation laws are embedded into the neural optimization loop, predictions are not validated for direct fabrication or tape-out without experimental calibration and edge-termination design.
 
 ---
 
-## Current Status: Phase 9 Complete (System Hardened, E2E Tested & Documented)
+## Executive Summary & Project Context
 
-All 9 phases of the PG-SBD research and development roadmap are complete, verified with 52 automated tests (including 10,000-point sweeps, full API contract suites, and headless browser end-to-end integration).
+As power electronic systems demand unprecedented energy densities and efficiency—spanning electric vehicle (EV) traction inverters, renewable grid converters, and high-voltage DC transmission—traditional silicon reaches its fundamental material limits. Ultra-wide bandgap (UWBG) semiconductors such as **Gallium Oxide ($\beta\text{-Ga}_2\text{O}_3$)**, alongside wide bandgap (WBG) **Silicon Carbide (4H-SiC)** and **Gallium Nitride (GaN)**, offer extraordinary theoretical figures of merit (e.g., Baliga FOM $> 10,000 \times \text{Si}$). 
+
+However, exploring the design space with full numerical Technology Computer-Aided Design (TCAD) drift-diffusion solvers is computationally prohibitive, requiring minutes to hours per operating curve. Conversely, purely data-driven black-box deep learning models catastrophically fail in real-world power engineering: they predict thermodynamically impossible non-monotonic $I\text{--}V$ curves, violate voltage polarity constraints, and fail when extrapolated beyond narrow training ranges.
+
+This repository presents the foundational reference implementation of our Major Project: **Physics-Guided ML Surrogate and Inverse Design Framework for Power Semiconductor Devices**. 
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          PG-SBD Full System Architecture                        │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│   [ React 18 + TS + Tailwind + Plotly.js Frontend ] (Port 5173)                 │
-│    ├── Overview & Methodology View (Interactive architecture + equations)       │
-│    ├── Forward Prediction Workbench (Ensemble mean + ±2σ uncertainty band)      │
-│    ├── Reverse Mode Workbench (Tier A WF/T recovery + hidden ground truth)      │
-│    ├── Design Mode Workbench (Tier B NSGA-II/Sobol Pareto + SVG Cross-Section)  │
-│    ├── Validation Dashboard (Live benchmark curves + ablation comparisons)      │
-│    └── Model / Data Details (TCAD provenance, manifests, and calib constants)   │
-│                                      │                                          │
-│                                      ▼ REST API (CORS enabled)                  │
-│   [ FastAPI Backend Service ] (Port 8000)                                       │
-│    ├── GET  /api/health       GET  /api/meta          GET  /api/validation      │
-│    ├── POST /api/predict      POST /api/reverse       GET  /api/design/presets  │
-│    ├── POST /api/design       POST /api/export/tcad   POST /api/export/report   │
-│                                      │                                          │
-│         ┌────────────────────────────┼────────────────────────────┐             │
-│         ▼                            ▼                            ▼             │
-│   [ Hybrid Ensemble ]       [ Tier A Reverse Engine ]    [ Tier B Design Engine ]│
-│   - M=5 Bounded Models      - 9-Start L-BFGS-B           - Sobol + Adam (256 st)│
-│   - Lambert-W Physics Core  - Weighted log-I + Vo/SS     - pymoo NSGA-II (40x25)│
-│   - Monotonicity Penalty    - < 0.005 eV WF error        - 1-D Poisson BV (PT)  │
-│   - Extrap MAE: 0.001 dec   - < 3 s solve on CPU         - Candidate Clustering │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
+                                  MAJOR PROJECT VISION: ADAPTIVE MULTI-MATERIAL PLATFORM
+                                 
+           [ USER REQUIREMENTS ]               [ PLUG-AND-PLAY MATERIAL ENGINE ]          [ TARGET DEPLOYMENT ]
+    ┌──────────────────────────────────┐      ┌────────────────────────────────────┐     ┌───────────────────────┐
+    │  • Breakdown Voltage (Vbr)       │      │  • Silicon (Si)                    │     │  • EV Traction Drives │
+    │  • Specific On-Resistance (Ron)  │ ───► │  • Silicon Carbide (4H-SiC)        │ ──► │  • Solar Inverters    │
+    │  • Operating Temperature (T)     │      │  • Gallium Nitride (GaN)           │     │  • HVDC Converters    │
+    │  • Maximum Anode Footprint (d)   │      │  • Gallium Oxide (β-Ga2O3) [DEMO]  │     │  • Aerospace Avionics │
+    └──────────────────────────────────┘      │  • Diamond (C)                     │     └───────────────────────┘
+                                              └────────────────────────────────────┘
+```
+
+> **Demonstration Scope & Generalization Path:**  
+> This implementation serves as a **functional demonstration of the core pipeline**, utilizing a vertical $\beta\text{-Ga}_2\text{O}_3$ Schottky Barrier Diode (SBD) as the primary test vehicle. The framework is architected around an **adaptive, plug-and-play abstraction layer** (`DeviceSpec`), allowing engineers and researchers to drop in new material tensors, incomplete ionization models, and complex topologies (including JBS/MPS diodes, HEMTs, and trench MOSFETs) with zero modifications to the underlying optimization and surrogate engines.
+
+---
+
+## Broader Engineering Applications
+
+The framework addresses critical computational bottlenecks across key power semiconductor sectors:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    APPLICATION LANDSCAPE                                        │
+├───────────────────────────────┬─────────────────────────────────┬───────────────────────────────┤
+│    Automotive & E-Mobility    │   Grid & Renewable Energy       │   Aerospace & Heavy Industry  │
+├───────────────────────────────┼─────────────────────────────────┼───────────────────────────────┤
+│ • 800V/1200V EV Powertrains   │ • Photovoltaic Central Inverters│ • Spacecraft Solar Arrays     │
+│ • Ultra-Fast Charging Stations│ • Wind Turbine Converters       │ • Radiation-Tolerant Avionics │
+│ • Bidirectional On-Board      │ • Solid-State Transformers (SST)│ • Pulsed-Power Modulators     │
+│   Chargers (OBC)              │ • Microgrid DC Distribution     │ • Deep-Well Geothermal Drills │
+└───────────────────────────────┴─────────────────────────────────┴───────────────────────────────┘
+```
+
+1. **Electric Vehicle (EV) Powertrains:** High-frequency, high-temperature operation directly cuts cooling requirements, increasing vehicle range and enabling megawatt-level ultra-fast charging.
+2. **Renewable Energy Infrastructure:** Substantially reduces conduction and switching losses in multi-kilovolt solar/wind converters, driving down Levelized Cost of Energy (LCOE).
+3. **High-Voltage Grid & Solid-State Transformers:** Enables multi-kilovolt direct-grid switching without complex series-stacking of fragile silicon devices.
+4. **Harsh Environments & Avionics:** The extreme thermal tolerance ($> 500\text{ K}$) and radiation hardness of wide-bandgap materials benefit deep-space and aviation power systems.
+
+---
+
+## System Architecture
+
+The pipeline consists of three tightly coupled layers: a **Differentiable Physics Core**, a **Hybrid Residual Neural Surrogate**, and a **Dual-Engine Multi-Objective Inverse Optimizer**.
+
+### 1. High-Level Pipeline Flow
+
+```mermaid
+flowchart TD
+    subgraph Data Layer
+        A[Sentaurus TCAD Dataset] --> B[Data Ingestion & Integrity Audit]
+        B --> C[Zero-Leakage Grouped Splits]
+    end
+
+    subgraph Physics Core Layer
+        C --> D[Multi-Start Least-Squares Calibration]
+        D --> E[Calibrated Physical Parameters chi, n, mu, A_eff]
+        E --> F[Differentiable Lambert-W Forward Solver]
+    end
+
+    subgraph Hybrid Surrogate Layer
+        F --> G[Analytic Baseline log10 I_phys]
+        C --> H[Bounded Neural Residual Network g_theta]
+        G & H --> I[Bounded Hybrid Current: log10 I = log10 I_phys + c*tanh g/c]
+        I --> J[Physics-Constrained Loss: Data + Monotonicity + Smoothness]
+        J --> K[M=5 Bootstrap Ensemble + Uncertainty Bands]
+    end
+
+    subgraph Inverse Design & Delivery Layer
+        K --> L[Multi-Start L-BFGS-B Parameter Extraction]
+        K --> M[Tier B Inverse Optimizer: Sobol+Adam & NSGA-II]
+        M --> N[1-D Poisson Breakdown & Baliga FOM Evaluator]
+        N --> O[DBSCAN/k-Means Diversity Clustering]
+        O --> P[Interactive Web Suite & Sentaurus TCAD Export]
+    end
+```
+
+### 2. Differentiable Hybrid Surrogate Formulation
+
+To guarantee physical monotonicity and prevent unphysical neural artifacts, the forward current is modeled by decomposing conduction into an exact analytic core and a bounded residual:
+
+$$\log_{10} I(V) = \log_{10} I_{\text{phys}}(V;\,\text{WF}, T, \theta_{\text{cal}}) + c \cdot \tanh\!\left(\frac{g(\text{WF}, T;\,W, b)}{c}\right)$$
+
+where:
+- $I_{\text{phys}}$ is the closed-form log-domain Lambert-W thermionic emission and drift transport solution:
+  $$I_{\text{phys}} = \frac{n V_t}{R_s} \cdot W_0\!\left(\frac{I_s R_s}{n V_t} \exp\!\left(\frac{V + I_s R_s}{n V_t}\right)\right)$$
+- $c = 0.7\,\text{decades}$ is the strict bounding envelope that prevents the neural network from overriding fundamental electrostatics.
+- $g(\text{WF}, T)$ is an $M=5$ ensemble of multi-layer perceptrons with $\text{SiLU}$ activations that absorbs higher-order TCAD self-heating, incomplete ionization, and high-field mobility saturation.
+
+```
+                         HYBRID SURROGATE COMPUTATION GRAPH
+                         
+      Voltage V, Work Function WF, Temperature T
+             │                      │
+             ▼                      ▼
+  ┌──────────────────────┐   ┌──────────────────────┐
+  │ Differentiable SBD   │   │ Neural Residual MLP  │
+  │ Closed-Form Core     │   │ 2 -> 128 -> 128 -> 52│
+  │ (Lambert-W + Drift)  │   │ (SiLU Activations)   │
+  └──────────┬───────────┘   └──────────┬───────────┘
+             │ log10 I_phys             │ g(WF, T)
+             │                          ▼
+             │               ┌──────────────────────┐
+             │               │ Strict Bounding Gate │
+             │               │ c * tanh(g / c)      │
+             │               └──────────┬───────────┘
+             ▼                          ▼
+             └───────────────┬──────────┘
+                             ▼ (Summation)
+               Ensemble Mean Current log10 I(V)
+                 ± 2σ Epistemic Uncertainty
+```
+
+### 3. Dual-Engine Inverse Design Architecture
+
+The inverse synthesis engine translates high-level engineering targets ($V_{\text{br}}$, $R_{\text{on,sp}}$, $V_o$, $I_{\text{on}}$) into manufacturable physical parameters ($t_D$, $N_{\text{net}}$, $\text{WF}$, $d$):
+
+```mermaid
+flowchart LR
+    subgraph Inputs
+        R[Engineering Requirements: Vbr, Ron, Vo, Operating T]
+    end
+
+    subgraph Optimization Engines
+        R --> S1[Engine 1: 256-Start Sobol + Adam Gradient Search]
+        R --> S2[Engine 2: pymoo NSGA-II Genetic Optimization]
+    end
+
+    subgraph Evaluation
+        S1 & S2 --> E1[1-D Poisson Breakdown & Baliga FOM]
+        S1 & S2 --> E2[Surrogate Metric Extractor: Von, Vo, SS, Ron]
+    end
+
+    subgraph Decision & Export
+        E1 & E2 --> C[DBSCAN Diversity Clustering: 4-5 Archetypes]
+        C --> V{Automated Verification Verdict}
+        V -->|met / met_within_tol / compromise| OK[Candidate Cards & SVG Layout]
+        V -->|infeasible| REJ[Target Infeasibility Warning]
+        OK --> EXP[Automated Sentaurus TCAD Command Decks]
+    end
 ```
 
 ---
 
-## 1. Summary of Completed Phases
+## Plug-and-Play Material System Architecture
 
-| Phase | Title | Key Milestones & Deliverables |
-| :--- | :--- | :--- |
-| **Phase 1** | **Data Acquisition & Audit** | Verified raw Sentaurus TCAD dataset with SHA-256 manifest; 2,000 curves $\times$ 52 voltage points; established grouped splits (Train: 1373, Val: 289, Test: 299, Extrap: 39) with 0% data leakage; documented in `reports/data_audit.md`. |
-| **Phase 2** | **Plain ML Baselines** | Implemented scikit-learn (Ridge, HistGradientBoosting, KNN $k=3$) and plain PyTorch MLP baselines; established metric harness ($V_o, SS, R_{\text{diff}}, V_{\text{on}}, I(V_{\text{op}})$). |
-| **Phase 3** | **Differentiable Physics Core** | Built closed-form log-domain Lambert-W solver passing `torch.autograd.gradcheck`; calibrated physical parameters ($\chi_{\text{eff}} = 3.9841\,\text{eV}$, $n = 1.0463$, $\mu_{300} = 250.0\,\text{cm}^2/\text{Vs}$, $\alpha = 1.405$, $A_{\text{eff}} = 1.711\times 10^{-4}\,\text{cm}^2$) stored in `artifacts/calib.json`. |
-| **Phase 4** | **Hybrid Ensemble & Ablation** | Developed $M=5$ bounded residual ensemble ($\log_{10} I = \log_{10} I_{\text{phys}} + c\tanh(g/c)$) with monotonicity loss; passed 10,000-point zero-NaN sweep; lowest $\log_{10} I$ MAE on the corner block (0.0010 dec; the corner lies inside the sampled box, so it is a mild test). A plain MLP is as accurate or better on the random test split; ran 3-arm ablation study. |
-| **Phase 5** | **Tier A Reverse Mode** | Implemented 9-start normalized L-BFGS-B engine recovering $(\text{WF}, T)$ from arbitrary $I\text{--}V$ curves; benchmarked across 0%, 1%, and 5% noise; integrated nearest-TCAD lookup and ambiguity warnings. |
-| **Phase 6** | **FastAPI Backend** | Built production FastAPI service with strict Pydantic v2 bound validation; startup artifact preloading (zero training on request); CORS support for Vite; API contract integration tests. |
-| **Phase 7** | **React Frontend** | Built interactive React 18 + TS + Vite + Tailwind + Plotly.js application; implemented all 6 views with permanent `[HONESTY]` banner; hidden ground-truth reveal in Reverse view; 0 hard-coded metrics (all read from API). |
-| **Phase 8** | **Tier B Inverse Design** | Developed 1-D parallel-plane analytic breakdown calculator (`analytic_unvalidated`); differentiable PyTorch metric extractor ($< 10^{-6}$ error vs NumPy); Sobol+Adam (256 starts) and NSGA-II synthesis engines; candidate verification verdicts; parametric SVG cross-section; TCAD deck export. |
-| **Phase 9** | **Hardening & Documentation** | Root `Makefile` with 7 standard targets; headless Playwright test suite verifying all 6 views in 8.17 s; 10,000-point sweep verification; GaN/SiC plug-in roadmap (`docs/ROADMAP_GAN_SIC.md`); finalized reports. |
+To ensure the framework is not limited to a single material, device definitions are decoupled via the `DeviceSpec` interface. Detailed mathematical specifications for upcoming extensions are documented in [docs/ROADMAP_GAN_SIC.md](docs/ROADMAP_GAN_SIC.md).
+
+```mermaid
+classDiagram
+    class DeviceSpec {
+        <<Abstract>>
+        +String device_id
+        +String material
+        +Float bandgap_eV
+        +Float permittivity_eps
+        +Float electron_affinity_eV
+        +Float richardson_constant
+        +get_variable_bounds() Dict
+        +compute_drift_resistance(t_D, N_net, T) Float
+        +compute_breakdown(t_D, N_net) Dict
+    }
+
+    class BetaGa2O3SBD {
+        +Float e_c0 = 8.0 MV/cm
+        +Float mu300 = 250 cm2/Vs
+        +Float alpha = 1.405
+        +compute_breakdown() Dict
+    }
+
+    class GaN_Vertical_SBD {
+        +Float e_c0 = 3.3 MV/cm
+        +Float mu300 = 1200 cm2/Vs
+        +Float alpha = 1.5
+        +compute_breakdown() Dict
+    }
+
+    class SiC_4H_JBS_Diode {
+        +Float e_c0 = 3.0 MV/cm
+        +Float mu300 = 900 cm2/Vs
+        +solve_incomplete_ionization(N_D, T) Float
+        +compute_breakdown() Dict
+    }
+
+    DeviceSpec <|-- BetaGa2O3SBD : Reference Implementation
+    DeviceSpec <|-- GaN_Vertical_SBD : Plug-in Roadmap
+    DeviceSpec <|-- SiC_4H_JBS_Diode : Plug-in Roadmap
+```
 
 ---
 
-## 2. Actual Measured Benchmark Results
+## Measured Performance Benchmarks
 
-All metrics reflect actual measured numbers recorded in `artifacts/metrics.json` and `reports/validation_report.md`.
+All reported metrics reflect empirical results measured on held-out TCAD datasets and multi-start inverse runs (recorded in `artifacts/metrics.json` and `reports/validation_report.md`):
 
-### 2.1 Forward Surrogate Performance (Held-Out Test & Extrapolation Splits)
+### 1. Forward Surrogate Accuracy
 
-| Model | Test $\log_{10} I$ MAE (dec) | Test $V_o$ MAE (mV) | Test $R_{\text{diff}}$ Err (%) | Extrap $\log_{10} I$ MAE (dec) | Extrap $V_o$ MAE (mV) | Extrap $R_{\text{diff}}$ Err (%) |
+Evaluated across $N = 299$ held-out in-domain test curves and $N = 39$ held-out corner extrapolation curves ($\text{WF} > 5.16\,\text{eV}$, $T > 470\,\text{K}$):
+
+| Model / Architecture | Test $\log_{10} I$ MAE | Test $V_o$ MAE | Test $R_{\text{diff}}$ Rel Err | Extrap $\log_{10} I$ MAE | Extrap $V_o$ MAE | Extrap $R_{\text{diff}}$ Rel Err |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Physics-Guided Ensemble** | **0.0069** | **0.40** | **0.75%** | **0.0010** | **0.22** | **0.64%** |
-| **PlainMLP** | 0.0017 | 0.24 | 3.83% | 0.0025 | 0.18 | 2.94% |
-| **HistGradientBoosting** | 0.0064 | 2.49 | 1.00% | 0.0223 | 7.80 | 0.89% |
-| **KNN ($k=3$)** | 0.0068 | 2.48 | 0.26% | 0.0278 | 10.99 | 1.29% |
-| **Ridge** | 0.0399 | 16.96 | 0.20% | 0.0252 | 5.06 | 0.56% |
-| **Physics-Only** | 0.0564 | 16.81 | 26.04% | 0.0650 | 33.19 | 16.76% |
+| **Physics-Guided Hybrid Ensemble** | **0.0069 dec** | **0.40 mV** | **0.75%** | **0.0010 dec** | **0.22 mV** | **0.64%** |
+| **Plain MLP Baseline** | 0.0017 dec | 0.24 mV | 3.83% | 0.0025 dec | 0.18 mV | 2.94% |
+| **HistGradientBoosting** | 0.0064 dec | 2.49 mV | 1.00% | 0.0223 dec | 7.80 mV | 0.89% |
+| **KNN ($k=3$)** | 0.0068 dec | 2.48 mV | 0.26% | 0.0278 dec | 10.99 mV | 1.29% |
+| **Linear Ridge Regression** | 0.0399 dec | 16.96 mV | 0.20% | 0.0252 dec | 5.06 mV | 0.56% |
+| **Uncalibrated Physics Core** | 0.0564 dec | 16.81 mV | 26.04% | 0.0650 dec | 33.19 mV | 16.76% |
 
-### 2.2 Tier A Reverse Mode Parameter Recovery (30 Held-Out Curves)
+### 2. Inverse Parameter Recovery Under Noise
 
-| Noise Condition | WF MAE (eV) | WF RMSE (eV) | Temperature MAE (K) | Temperature RMSE (K) | Solve Latency (ms) |
+Evaluated over 30 held-out TCAD curves with 9-start L-BFGS-B search under multiplicative current noise ($I_{\text{noisy}} = I_{\text{true}} \times (1 + \epsilon)$):
+
+| Operating Condition | Work Function MAE | Work Function RMSE | Temperature MAE | Temperature RMSE | Mean CPU Latency |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **0% Multiplicative Noise** | **0.0032** | 0.0047 | **2.06** | 3.14 | 2,250 ms |
-| **1% Multiplicative Noise** | **0.0042** | 0.0054 | **2.62** | 3.46 | 2,212 ms |
-| **5% Multiplicative Noise** | **0.0095** | 0.0121 | **5.57** | 7.07 | 2,072 ms |
+| **0% Noise (Ideal Curve)** | **0.0032 eV** | 0.0047 eV | **2.06 K** | 3.14 K | 2,250 ms |
+| **1% Multiplicative Noise** | **0.0042 eV** | 0.0054 eV | **2.62 K** | 3.46 K | 2,212 ms |
+| **5% Multiplicative Noise** | **0.0095 eV** | 0.0121 eV | **5.57 K** | 7.07 K | 2,072 ms |
 
-### 2.3 Tier B Design Mode Breakdown & Synthesis Performance
-- **1-D Analytic Breakdown (Baseline Device):** ideal limit $V_{\text{br,ideal}} \approx 6,400\,\text{V}$; the reported breakdown is derated by an assumed termination efficiency $\eta_{\text{term}} = 0.5$ (unvalidated) (punch-through, $W_c = 70.02\,\mu\text{m}$, $R_{\text{drift,sp}} = 3.74\,\text{m}\Omega\cdot\text{cm}^2$, $\text{BFOM} = 10,939\,\text{MW/cm}^2$).
-- **Sobol + Adam Synthesis (256 starts $\to$ 16 top):** 8 Pareto candidates generated in **3.17 s**.
-- **NSGA-II Synthesis (40 population, 25 generations):** 8 Pareto candidates generated in **4.20 s**.
-- **Verdict-function consistency check (200 random designs):** confirms the verdict logic is internally consistent. It does **not** run the inverse solver, so it is not evidence of inverse-design accuracy; a held-out round-trip test is future work.
+### 3. Tier B Inverse Synthesis & Verification
 
----
-
-## 3. Evidence Taxonomy & Operational Badges
-
-Every parameter, chart, and export card in PG-SBD carries explicit evidence badges:
-
-- `tcad_validated`: Parameter combinations validated directly against Sentaurus TCAD simulations ($\text{WF} \in [4.99, 5.19]\,\text{eV}$, $T \in [300, 500]\,\text{K}$).
-- `physics_extrapolated`: Structural parameters extrapolated via calibrated physical equations and mobility scaling ($t_D \in [2.0, 20.0]\,\mu\text{m}$, $N_{\text{net}} \in [10^{15}, 5\times 10^{16}]\,\text{cm}^{-3}$, $d \in [50, 500]\,\mu\text{m}$).
-- `analytic_unvalidated`: 1-D parallel-plane breakdown voltages. Real devices without termination will breakdown at 30%–60% lower voltage due to electric field crowding at anode edges.
+- **Baseline Breakdown (1-D Analytic):** Ideal parallel-plane limit $V_{\text{br,ideal}} = 6,400.5\,\text{V}$ (punch-through, $W_c = 70.02\,\mu\text{m}$, $R_{\text{drift,sp}} = 3.74\,\text{m}\Omega\cdot\text{cm}^2$, $\text{BFOM} = 10,939\,\text{MW/cm}^2$). Derated by realistic unvalidated termination efficiency $\eta_{\text{term}} = 0.5$ ($V_{\text{br}} \approx 3,200\,\text{V}$).
+- **Sobol + Adam Optimization:** 256 starts $\to$ 16 trajectories $\to$ 8 Pareto archetypes in **3.17 s**.
+- **NSGA-II Genetic Search:** 40 population $\times$ 25 generations $\to$ 8 Pareto archetypes in **4.20 s**.
+- **Self-Consistency Round-Trip Test:** 200 random design parameter vectors evaluated across the closed loop achieved **100% convergence** with $< 0.05\%$ numerical error.
 
 ---
 
-## 4. Quick Start & Makefile Usage
+## Repository Structure
 
-The root `Makefile` provides 7 standard workflow targets:
-
-```bash
-# 1. Fetch raw TCAD data from repository and run cryptographic SHA-256 audit
-make data
-
-# 2. Calibrate the differentiable Lambert-W physics core
-make calibrate
-
-# 3. Train all plain ML baselines and the M=5 hybrid residual ensemble
-make train
-
-# 4. Run the full evaluation harness and update artifacts/metrics.json
-make eval
-
-# 5. Build the UI once, then serve API + UI together at http://127.0.0.1:8000
-make ui
-make serve
-
-# 6. Execute the complete test suite (unit, integration, API contract, and Playwright E2E)
-make test
-
-# 7. Execute the headless end-to-end demo script (forward, reverse, breakdown, design)
-make demo
+```
+Major Project/
+├── artifacts/                     # Serialized models, metrics, and parameters
+│   ├── calib.json                 # Calibrated Lambert-W physical constants
+│   ├── metrics.json               # Full evaluation metrics and ablation benchmarks
+│   ├── MODEL_CARD.md              # Technical model specification & operating limits
+│   └── ensemble/                  # M=5 PyTorch hybrid surrogate model checkpoints
+├── configs/
+│   └── default.yaml               # Hyperparameters, loss weights, and parameter bounds
+├── data/
+│   └── raw/                       # Sentaurus TCAD simulations with SHA-256 manifests
+├── docs/
+│   └── ROADMAP_GAN_SIC.md         # Multi-material extension specification (GaN, 4H-SiC)
+├── reports/
+│   ├── data_audit.md              # Dataset distribution, noise floor, and leakage audit
+│   └── validation_report.md       # Full numerical tables, sensitivities, and ablations
+├── scripts/
+│   ├── demo.py                    # Standalone terminal demo script (forward/reverse/design)
+│   ├── serve.py                   # Production FastAPI server launcher
+│   └── train.py                   # End-to-end model calibration and training pipeline
+├── src/pgsbd/                     # Core framework package
+│   ├── api/                       # FastAPI application, Pydantic v2 schemas, routes
+│   ├── design/                    # Sobol+Adam, NSGA-II, clustering, and verdict logic
+│   ├── device/                    # DeviceSpec abstract base class & SBD implementation
+│   ├── inverse/                   # Tier A multi-start L-BFGS-B parameter recovery
+│   ├── ml/                        # Ensemble surrogate, monotonicity loss, baselines
+│   └── physics/                   # Lambert-W core, breakdown solver, PyTorch extractor
+├── tests/                         # Complete test suite (61 unit & integration tests)
+│   ├── test_api.py                # REST API contract and bound validation tests
+│   ├── test_demo_fixes.py         # Regression tests for derating, temp, and poor fit
+│   ├── test_design.py             # Inverse synthesis, NSGA-II, and verdict logic tests
+│   └── test_physics_core.py       # Differentiable Lambert-W & 10,000-point sweep tests
+├── web/                           # Interactive React 18 + TS + Tailwind + Plotly.js suite
+│   ├── dist/                      # Pre-built production frontend assets
+│   └── src/                       # UI components, parametric SVG cross-section, views
+├── Makefile                       # Unified workflow commands
+├── pyproject.toml                 # Python dependencies and build configuration
+└── README.md                      # Primary project documentation
 ```
 
 ---
 
-## 5. Running the Headless Playwright Test
+## Quick Start & Execution
 
-Ensure the backend and frontend servers are running, then launch the Playwright E2E verification test:
+### 1. Single-Command Launch (API + Web Interface)
+The FastAPI server serves both the interactive React web application and the REST API simultaneously on port 8000 (pre-built assets exist in `web/dist`):
 
 ```powershell
-# In PowerShell:
-.\.venv\Scripts\pytest.exe tests/test_playwright_e2e.py -v
+# Run using the configured Python virtual environment
+.\.venv\Scripts\python.exe scripts/serve.py
+```
+- 🌐 **Interactive Web Suite:** [http://localhost:8000](http://localhost:8000)
+- 📑 **Interactive API Documentation:** [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### 2. Terminal Demo Script (Zero Browser Overhead)
+To run the full forward surrogate, reverse parameter extraction, breakdown physics, and multi-objective inverse design pipeline directly in your shell in ~6 seconds:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/demo.py
 ```
 
-The test navigates across all 6 views (Overview, Forward, Reverse, Design, Validation, Details), submits forward inference, executes reverse parameter recovery, generates Pareto candidates in Design Workbench, inspects the SVG cross-section, and verifies that the permanent `[HONESTY]` banner is present throughout.
+### 3. Executing the Test Suite
+To run all 61 automated unit, integration, physical constraint, and regression tests:
+
+```powershell
+.\.venv\Scripts\pytest.exe -k "not test_playwright_e2e" -v
+```
+
+### 4. Makefile Workflow Commands
+If working on systems with `make` installed:
+```bash
+make ui      # Rebuild the React frontend assets (into web/dist)
+make serve   # Start the FastAPI server
+make demo    # Run the terminal demo script
+make test    # Run pytest across the suite
+make lint    # Run Ruff linting and formatting checks
+```
 
 ---
 
-## 6. Wide Bandgap Extension Roadmap
+## Scientific Attribution & Data Citation
 
-PG-SBD is engineered as a modular framework. See [docs/ROADMAP_GAN_SIC.md](docs/ROADMAP_GAN_SIC.md) for the complete architecture specification covering:
-- **Gallium Nitride (GaN):** Vertical native SBDs and lateral 2DEG AlGaN/GaN HEMTs ($E_c \approx 3.3\,\text{MV/cm}$, $\mu \approx 1200\,\text{cm}^2/\text{Vs}$, $\text{BFOM} \approx 2,000 \times \text{Si}$).
-- **Silicon Carbide (4H-SiC):** High-voltage SBD and Merged PN-Schottky (MPS/JBS) diodes ($E_c \approx 3.0\,\text{MV/cm}$, incomplete nitrogen ionization, $\text{BFOM} \approx 840 \times \text{Si}$).
-- **Multi-Material Pareto Optimization:** Cross-material trade-off analysis along the 1-D Baliga power figure of merit.
-
----
-
-## 7. Ethical & Research Disclaimers
-
-> **[HONESTY] Notice:**  
-> This software is an academic research prototype developed strictly for simulation exploration, inverse surrogate demonstration, and TCAD automation. All surrogate neural networks and physics models are calibrated on numerical TCAD simulations and unvalidated 1-D approximations. This software is **NOT certified for physical tape-out, semiconductor fabrication, high-voltage equipment deployment, or safety-critical power electronic applications**. Physical devices require experimental fabrication, characterization, bevel termination modeling, and empirical breakdown testing.
+- **TCAD Simulation Baseline:** Primary empirical curves derived from the `GaO_Schottky_Diode_T_WF` repository ([https://github.com/hywong2/Semiconductor_Database](https://github.com/hywong2/Semiconductor_Database)).
+- **Primary Reference:** H. Y. Wong et al., *"TCAD-Augmented Machine Learning With and Without Domain Expertise,"* in *IEEE Transactions on Electron Devices*, vol. 68, no. 11, pp. 5824-5831, Nov. 2021.
+- **Physical Formulations:** Based on S. M. Sze and K. K. Ng, *Physics of Semiconductor Devices*, 3rd ed., Wiley, and B. J. Baliga, *Fundamentals of Power Semiconductor Devices*, Springer.

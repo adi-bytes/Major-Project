@@ -10,8 +10,8 @@ RUFF ?= $(PYTHON) -m ruff
 help:
 	@echo "Available commands:"
 	@echo "  make data       - Fetch raw dataset from repository and audit"
-	@echo "  make calibrate  - Calibrate differentiable physics core (Phase 3)"
-	@echo "  make train      - Train ML baselines and hybrid ensemble (Phases 2 & 4)"
+	@echo "  make calibrate  - Calibrate differentiable Lambert-W physics core"
+	@echo "  make train      - Train ML baselines and hybrid physics-guided ensemble"
 	@echo "  make eval       - Evaluate models and generate validation report"
 	@echo "  make serve      - Run FastAPI server"
 	@echo "  make test       - Run complete test suite with pytest"

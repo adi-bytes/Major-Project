@@ -26,10 +26,10 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-lg font-bold text-brand-200 leading-tight">
-              PG-SBD Designer
+              Physics-Guided Power Semiconductor Inverse Design Framework
             </h1>
-            <p className="text-xs text-gray-500">
-              Physics-Guided β-Ga₂O₃ Schottky Barrier Diode Surrogate
+            <p className="text-xs text-gray-400">
+              Adaptive Multi-Material Pipeline · Initial Reference Vehicle: Vertical β-Ga₂O₃ SBD
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs">

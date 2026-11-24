@@ -149,12 +149,12 @@ export function ModelDetailsView() {
             </div>
           </div>
           <div className="flex gap-3 items-start">
-            <span className="badge badge-yellow mt-0.5 shrink-0">Tier B</span>
+            <span className="badge badge-purple mt-0.5 shrink-0">Tier B</span>
             <div>
-              <p className="text-gray-200 font-medium">Pending Phase 8</p>
+              <p className="text-gray-200 font-medium">Physics-Extrapolated Inverse Design</p>
               <p className="text-gray-400">
-                Inverse design with NSGA-II multi-objective optimization and
-                structural variable optimization. Not yet implemented.
+                Multi-objective optimization (NSGA-II and 256-start Sobol-gradient) across structural
+                variables (drift thickness, doping, diameter) with 1-D analytic breakdown estimation.
               </p>
             </div>
           </div>

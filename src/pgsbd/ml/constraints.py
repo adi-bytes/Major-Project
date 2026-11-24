@@ -4,7 +4,7 @@ Loss Terms:
 1. L_data: Huber loss on log10(I), up-weighted in turn-on region [1e-6, 1e-2] A.
 2. L_mono:
    - Voltage monotonicity: penalty on d(log_I)/dV < 0.
-   - Parameter monotonicity (verified in Phase 1):
+   - Parameter monotonicity (empirically & physically verified):
      * dVo / dWF > 0 (higher barrier shifts turn-on voltage higher)
      * dVo / dT < 0 (higher temperature shifts turn-on voltage lower)
 3. L_smooth: Second-difference roughness penalty along voltage grid.

@@ -1,4 +1,4 @@
-"""Regression tests for the demo-critical fixes (review items D1, D2, D5, D8)."""
+"""Regression tests for design synthesis, breakdown derating, and reverse recovery."""
 
 from __future__ import annotations
 
